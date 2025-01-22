@@ -91,7 +91,7 @@ const ProfileController = {
           message: "Error! You can not change your password! Wrong password.",
         });
       }
-      res.status(202).json({ message: "Password changed successfully!", pass });
+      res.status(202).json({ message: "Password changed successfully!" });
     } catch (error) {
       res
         .status(404)

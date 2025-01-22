@@ -1,11 +1,12 @@
 const db = require("../config/db");
+const cryptr = require("../cryptr/cryptr");
 
 const Profile = {
   createProfile: async (name, password) => {
     try {
       const query =
         "INSERT INTO Profile (name, password) VALUES ($1, $2) RETURNING *";
-      const values = [name, password];
+      const values = [name, cryptr.encrypt(password)];
       const result = await db.query(query, values);
       return result.rows[0];
     } catch (error) {
@@ -59,7 +60,7 @@ const Profile = {
       if (result.rowCount === 1) {
         try {
           const query = "UPDATE Profile SET password = $1 WHERE name = $2";
-          const values = [newPassword, name];
+          const values = [cryptr.encrypt(newPassword), name];
           return await db.query(query, values);
         } catch (error) {
           throw error;
