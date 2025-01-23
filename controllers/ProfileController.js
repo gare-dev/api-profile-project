@@ -1,4 +1,6 @@
+const { JsonWebTokenError } = require("jsonwebtoken");
 const ProfileModel = require("../models/ProfileModel");
+const jwt = require("jsonwebtoken");
 
 const ProfileController = {
   createProfile: async (req, res) => {
@@ -96,6 +98,28 @@ const ProfileController = {
       res
         .status(404)
         .json({ message: "Error when changing the password", error });
+    }
+  },
+  loginProfile: async (req, res) => {
+    const { name, password } = req.body;
+    try {
+      const login = await ProfileModel.loginProfile(name, password);
+
+      if (login.rowCount === 1) {
+        const id = login.rows[0].id;
+        const token = jwt.sign({ id }, process.env.SECRET, {
+          expiresIn: 300,
+        });
+
+        return res
+          .status(200)
+          .json({ message: "Logged successfully!", token: token, auth: true });
+      }
+      return res
+        .status(404)
+        .json({ message: "Error! Profile not found.", error: login });
+    } catch (error) {
+      res.status(501).json({ message: "Error on login!", error });
     }
   },
 };
