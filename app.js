@@ -1,12 +1,14 @@
 const express = require("express");
 const ProfileController = require("./controllers/ProfileController");
 require("dotenv").config();
-const verifyJWT = require("./functions/verifyJWT");
+const verifyJWT = require("./middleware/verifyJWT");
+const RequestLogger = require("./controllers/RequestLogController");
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.use(RequestLogger.requestLog);
 
 app.post("/api/loginProfile", ProfileController.loginProfile);
 app.get("/", (req, res) => {

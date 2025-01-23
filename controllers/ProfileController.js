@@ -1,4 +1,3 @@
-const { JsonWebTokenError } = require("jsonwebtoken");
 const ProfileModel = require("../models/ProfileModel");
 const jwt = require("jsonwebtoken");
 
@@ -108,7 +107,7 @@ const ProfileController = {
       if (login.rowCount === 1) {
         const id = login.rows[0].id;
         const token = jwt.sign({ id }, process.env.SECRET, {
-          expiresIn: 300,
+          expiresIn: 3600,
         });
 
         return res
