@@ -9,7 +9,7 @@ const PORT = 3000;
 app.use(express.json());
 
 app.post("/api/loginProfile", ProfileController.loginProfile);
-app.post("/", (req, res) => {
+app.get("/", (req, res) => {
   res.send("Olá!");
 });
 
