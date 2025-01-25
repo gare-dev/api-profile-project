@@ -13,6 +13,16 @@ const Profile = {
       throw error;
     }
   },
+  checkUsername: async (name) => {
+    try {
+      const query = "SELECT * FROM Profile where name = $1";
+      const values = [name];
+      const result = await db.query(query, values);
+      return result.rowCount;
+    } catch (error) {
+      throw error;
+    }
+  },
   loginProfile: async (name, password) => {
     try {
       const query = "SELECT * FROM Profile where name = $1 AND password = $2";

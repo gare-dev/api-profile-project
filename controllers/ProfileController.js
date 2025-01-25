@@ -4,8 +4,35 @@ const jwt = require("jsonwebtoken");
 const ProfileController = {
   createProfile: async (req, res) => {
     const { name, password } = req.body;
+    if (!name || !password) {
+      return res.status(400).json({
+        message: "Profile not created. Name or password is missing.",
+        error: "NO_NAME_OR_PASS",
+      });
+    }
+
+    if (typeof name === number) {
+      return res.status(400).json({
+        message: "Profile not created. Your username can not be a number.",
+        error: "USER_HAS_NUM",
+      });
+    }
+
     try {
-      const newProfile = await ProfileModel.createProfile(name, password);
+      const result = await ProfileModel.checkUsername(name);
+      if (result === 1) {
+        return res.status(409).json({
+          message:
+            "Profile not created. A profile with this username already exists.",
+          error: "DUPLICATED_PROFILE",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Server error." });
+    }
+
+    try {
+      await ProfileModel.createProfile(name, password);
       res.status(201).json({ message: "Profile created successfully!" });
     } catch (error) {
       res
@@ -19,66 +46,120 @@ const ProfileController = {
       res.status(200).json(profiles);
     } catch (error) {
       res.status(500).json({
-        message: "Error! It wasn't possible to list all profiles.",
+        message: "Server error.",
         error: error,
       });
     }
   },
   getProfile: async (req, res) => {
     const id = +req.params.id;
+
+    if (!id) {
+      return res.status(405).json({
+        message: "Error! The id must be a number.",
+        error: "INVALID_ID",
+      });
+    }
+
     try {
       const profile = await ProfileModel.getProfile(id);
       if (profile.length === 0) {
-        return res.status(404).json({ message: "Profile not found." });
+        return res
+          .status(404)
+          .json({ message: "Profile not found.", error: "PROFILE_NOT_FOUND" });
       }
       res.status(200).json(profile);
     } catch (error) {
-      res.status(404).json({
-        message: "Error!",
+      res.status(500).json({
+        message: "Server error.",
         error: error,
       });
     }
   },
   deleteProfile: async (req, res) => {
     const id = +req.params.id;
+    if (!id) {
+      return res.status(405).json({
+        message: "Error! The id must be a number.",
+        error: "INVALID_ID",
+      });
+    }
     try {
       const profile = await ProfileModel.deleteProfile(id);
       if (profile === 1) {
         return res
-          .status(201)
+          .status(200)
           .json({ message: "Profile deleted successfully!" });
       }
-      res.status(404).json({ message: "Error! Profile not found." });
-    } catch (error) {
       res.status(404).json({
-        message: "Error! It wasn't possible to delete the profile.",
+        message: "Error! Profile not found.",
+        error: "PROFILE_NOT_FOUND",
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Server error.",
         error,
       });
     }
   },
   editProfile: async (req, res) => {
     const { currentName, newName, lastName } = req.body;
+
+    if (currentName === newName) {
+      return res.status(400).json({
+        message: "Error! Your new name can not be your current name.",
+        error: "REPEATED_NAME",
+      });
+    }
+
+    if (!currentName || !newName) {
+      return res.status(404).json({
+        message:
+          "Impossible edit the profile. Missing currentName, newName or lastName.",
+        error: "MISSING_INFO",
+      });
+    }
+
     try {
       const editProfile = await ProfileModel.editProfile(
         currentName,
         newName,
         lastName
       );
+      if (editProfile.rowCount === 0) {
+        return res.status(404).json({
+          message: "Error. Profile not found.",
+          error: "PROFILE_NOT_FOUND",
+        });
+      }
       res
-        .status(203)
+        .status(201)
         .json({ message: "Profile edited successfully!", editProfile });
     } catch (error) {
-      res.status(404).json({
-        message: "Error! It wasn't possible to edit the profile.",
+      res.status(500).json({
+        message: "Server error.",
         error,
       });
     }
   },
   changePassword: async (req, res) => {
     const { name, newPassword, password } = req.body;
+    if (!name || !newPassword || !password) {
+      return res.status(404).json({
+        messsage: "Error. Missing name, password or newPassword.",
+        error: "MISSING_INFO",
+      });
+    }
+    if (newPassword.length < 3) {
+      return res.status(400).json({
+        message: "Error! Your new password must have at least 7 characters.",
+        error: "INVALID_NUM_PASSWORD",
+      });
+    }
     if (password === newPassword) {
       return res.status(400).json({
-        message: "The new password is the same as the current password.",
+        message: "Error. The new password is the same as the current password.",
+        error: "REPEATED_PASSWORD",
       });
     }
     try {
@@ -88,25 +169,30 @@ const ProfileController = {
         password
       );
       if (!pass) {
-        return res.status(403).json({
+        return res.status(400).json({
           message: "Error! You can not change your password! Wrong password.",
+          error: "WRONG_PASSWORD",
         });
       }
-      res.status(202).json({ message: "Password changed successfully!" });
+      res.status(204);
     } catch (error) {
-      res
-        .status(404)
-        .json({ message: "Error when changing the password", error });
+      res.status(500).json({ message: "Server error.", error });
     }
   },
-  loginProfile: async (req, res) => {
+  authProfile: async (req, res) => {
     const { name, password } = req.body;
+    if (!name || !password) {
+      res.status(404).json({
+        message: "Error! Missing name or password.",
+        error: "MISSING_INFO",
+      });
+    }
     try {
       const login = await ProfileModel.loginProfile(name, password);
 
       if (login.rowCount === 1) {
-        const id = login.rows[0].id;
-        const token = jwt.sign({ id }, process.env.SECRET, {
+        const name = login.rows[0].name;
+        const token = jwt.sign({ name }, process.env.SECRET, {
           expiresIn: 3600,
         });
 
@@ -118,7 +204,7 @@ const ProfileController = {
         .status(404)
         .json({ message: "Error! Profile not found.", error: login });
     } catch (error) {
-      res.status(501).json({ message: "Error on login!", error });
+      res.status(500).json({ message: "Server error.", error });
     }
   },
 };
