@@ -3,6 +3,7 @@ const ProfileController = require("./controllers/ProfileController");
 require("dotenv").config();
 const verifyJWT = require("./middleware/verifyJWT");
 const RequestLogger = require("./controllers/RequestLogController");
+const verifyName = require("./middleware/verifyName");
 
 const app = express();
 const PORT = 3000;
@@ -16,6 +17,7 @@ app.get("/", (req, res) => {
 });
 
 app.use(verifyJWT);
+app.use(verifyName);
 
 app.post("/api/createProfile", ProfileController.createProfile);
 app.get("/api/getAllProfile", ProfileController.getAllProfiles);

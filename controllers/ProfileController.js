@@ -1,5 +1,6 @@
 const ProfileModel = require("../models/ProfileModel");
 const jwt = require("jsonwebtoken");
+const cryptr = require("../cryptr/cryptr");
 
 const ProfileController = {
   createProfile: async (req, res) => {
@@ -104,6 +105,7 @@ const ProfileController = {
   },
   editProfile: async (req, res) => {
     const { currentName, newName, lastName } = req.body;
+    const jwtToken = jwt.decode(req.headers["authorization"]);
 
     if (currentName === newName) {
       return res.status(400).json({
@@ -121,6 +123,27 @@ const ProfileController = {
     }
 
     try {
+      const checkUsername = await ProfileModel.checkUsername(newName);
+      const checkCurrentName = await ProfileModel.checkUsername(currentName);
+
+      if (checkCurrentName === 0) {
+        return res.status(400).json({
+          message: "Error! Profile not found.",
+          error: "PROFILE_NOT_FOUND",
+        });
+      }
+
+      if (checkUsername === 1) {
+        return res.status(400).json({
+          message: "Error! Already exits an account with this name.",
+          error: "USED_NAME",
+        });
+      }
+    } catch (error) {
+      throw error;
+    }
+
+    try {
       const editProfile = await ProfileModel.editProfile(
         currentName,
         newName,
@@ -132,9 +155,7 @@ const ProfileController = {
           error: "PROFILE_NOT_FOUND",
         });
       }
-      res
-        .status(201)
-        .json({ message: "Profile edited successfully!", editProfile });
+      res.status(201).json({ message: "Profile edited successfully!" });
     } catch (error) {
       res.status(500).json({
         message: "Server error.",
@@ -156,7 +177,7 @@ const ProfileController = {
         error: "INVALID_NUM_PASSWORD",
       });
     }
-    if (password === newPassword) {
+    if (cryptr.decrypt(password) === newPassword) {
       return res.status(400).json({
         message: "Error. The new password is the same as the current password.",
         error: "REPEATED_PASSWORD",
@@ -174,7 +195,7 @@ const ProfileController = {
           error: "WRONG_PASSWORD",
         });
       }
-      res.status(204);
+      res.sendStatus(204);
     } catch (error) {
       res.status(500).json({ message: "Server error.", error });
     }
@@ -200,9 +221,10 @@ const ProfileController = {
           .status(200)
           .json({ message: "Logged successfully!", token: token, auth: true });
       }
-      return res
-        .status(404)
-        .json({ message: "Error! Profile not found.", error: login });
+      return res.status(404).json({
+        message: "Error! Wrong username or password.",
+        error: "WRONG_INFO",
+      });
     } catch (error) {
       res.status(500).json({ message: "Server error.", error });
     }

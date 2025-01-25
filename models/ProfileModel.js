@@ -13,6 +13,7 @@ const Profile = {
       throw error;
     }
   },
+
   checkUsername: async (name) => {
     try {
       const query = "SELECT * FROM Profile where name = $1";
