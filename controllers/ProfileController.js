@@ -21,7 +21,7 @@ const ProfileController = {
 
     try {
       const result = await ProfileModel.checkUsername(name);
-      if (result === 1) {
+      if (result.rowCount === 1) {
         return res.status(409).json({
           message:
             "Profile not created. A profile with this username already exists.",
@@ -104,48 +104,50 @@ const ProfileController = {
     }
   },
   editProfile: async (req, res) => {
-    const { currentName, newName, lastName } = req.body;
-    const jwtToken = jwt.decode(req.headers["authorization"]);
+    const { name, newName, lastName } = req.body;
 
-    if (currentName === newName) {
+    if (name === newName) {
       return res.status(400).json({
         message: "Error! Your new name can not be your current name.",
         error: "REPEATED_NAME",
       });
     }
 
-    if (!currentName || !newName) {
+    if (!name || !newName) {
       return res.status(404).json({
         message:
-          "Impossible edit the profile. Missing currentName, newName or lastName.",
+          "Impossible edit the profile. Missing name, newName or lastName.",
         error: "MISSING_INFO",
       });
     }
 
     try {
       const checkUsername = await ProfileModel.checkUsername(newName);
-      const checkCurrentName = await ProfileModel.checkUsername(currentName);
+      const checkCurrentName = await ProfileModel.checkUsername(name);
 
-      if (checkCurrentName === 0) {
+      if (checkCurrentName.rowCount === 0) {
         return res.status(400).json({
           message: "Error! Profile not found.",
           error: "PROFILE_NOT_FOUND",
         });
       }
 
-      if (checkUsername === 1) {
+      if (checkUsername.rowCount === 1) {
         return res.status(400).json({
           message: "Error! Already exits an account with this name.",
           error: "USED_NAME",
         });
       }
     } catch (error) {
-      throw error;
+      return res.status(500).json({
+        message: "Server error while checking username.",
+        error,
+      });
     }
 
     try {
       const editProfile = await ProfileModel.editProfile(
-        currentName,
+        name,
         newName,
         lastName
       );
@@ -155,9 +157,11 @@ const ProfileController = {
           error: "PROFILE_NOT_FOUND",
         });
       }
+
       res.status(201).json({ message: "Profile edited successfully!" });
     } catch (error) {
-      res.status(500).json({
+      console.log(error);
+      return res.status(500).json({
         message: "Server error.",
         error,
       });
@@ -213,9 +217,13 @@ const ProfileController = {
 
       if (login.rowCount === 1) {
         const name = login.rows[0].name;
-        const token = jwt.sign({ name }, process.env.SECRET, {
-          expiresIn: 3600,
-        });
+        const token = jwt.sign(
+          { name, id: login.rows[0].id },
+          process.env.SECRET,
+          {
+            expiresIn: 3600,
+          }
+        );
 
         return res
           .status(200)

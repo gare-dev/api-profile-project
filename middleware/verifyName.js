@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const HackerInfoModel = require("../models/HackerInfoModel");
+const ProfileModel = require("../models/ProfileModel");
 
 async function verifyName(req, res, next) {
   const jwtToken = jwt.decode(req.headers["authorization"]);
@@ -11,7 +12,10 @@ async function verifyName(req, res, next) {
   const payload = JSON.stringify(req.body);
 
   if (name) {
-    if (jwtToken.name !== name) {
+    const result = await ProfileModel.checkUsername(name);
+    const id = result.rows[0].id;
+
+    if (jwtToken.name !== name && id !== jwtToken.id) {
       try {
         await HackerInfoModel.SaveHackerInfo(
           method,
@@ -21,7 +25,7 @@ async function verifyName(req, res, next) {
           payload
         );
       } catch (error) {
-        console.error("Error loggin hackerinfo", error);
+        console.error("Error logging hackerinfo", error);
       }
       return res.status(403).json({ message: "Hacker identified" });
     }

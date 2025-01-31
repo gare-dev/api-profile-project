@@ -12,6 +12,8 @@
   "dependencies": {
     "cryptr": "^6.3.0",
     "dotenv": "^16.4.7",
+    "escpos": "^3.0.0-alpha.6",
+    "escpos-usb": "^3.0.0-alpha.4",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.1"

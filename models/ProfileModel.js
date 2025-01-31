@@ -19,7 +19,7 @@ const Profile = {
       const query = "SELECT * FROM Profile where name = $1";
       const values = [name];
       const result = await db.query(query, values);
-      return result.rowCount;
+      return result;
     } catch (error) {
       throw error;
     }
@@ -63,11 +63,11 @@ const Profile = {
       throw error;
     }
   },
-  editProfile: async (currentName, newName, newLastName) => {
+  editProfile: async (name, newName, newLastName) => {
     try {
       const query =
         "UPDATE Profile SET name = $1, lastName = $2 WHERE name = $3";
-      const values = [newName, newLastName, currentName];
+      const values = [newName, newLastName, name];
       return await db.query(query, values);
     } catch (error) {
       throw error;
